@@ -1,0 +1,75 @@
+version: "3"
+volumes:
+  #first you have to create a volume with this name
+  #persist data from postgresql db -> Keep your datas even you down your containers
+  postgis-data:
+services:
+  #database with postgis extension
+  db:
+    image: kartoza/postgis:12.1
+    restart: always
+    #Use your own environment variables
+    environment:
+      - POSTGRES_USER=nomuser
+      - POSTGRES_PASS=password
+      - POSTGRES_DBNAME=nomdb
+      - PGDATA=/var/lib/postgresql/data
+      - DEFAULT_ENCODING="UTF-8"
+      - DEFAULT_COLLATION="fr_FR.UTF-8"
+      - DEFAULT_CTYPE="fr_FR.UTF-8"
+      - DATETYPE=ISO,DMY
+    ports: 
+      - 1234:5432
+    volumes:
+       - postgis-data:/var/lib/postgresql/data
+    # you can use network or link between web server and db
+    # networks:
+    #   - back-network
+  #install composer
+  composer:
+    depends_on:
+      - web
+    restart: 'no'
+    image: composer:latest
+    command: install
+    volumes:
+      - C:\Users\kevin\Desktop\docker-repo\app:/app
+    # networks:
+    #   - back-network
+  # postgis:
+    # depends_on:
+    #   -db
+    # image: postgis
+  #PHP needs Postgre to install pdo_pgsql
+  web:
+    depends_on:
+      - db
+    links:
+      - "db:db"
+    image: webdevops/php-apache-dev:7.4
+    container_name: web-apache-php
+    restart: always
+    ports:
+        - 8090:80
+    volumes:
+        #repo where you have your website code
+        #Warning /!\ -> If you work on windows, you have to write absolute path
+        #replace yourAppPath with your own
+        - yourAppPath:/app
+        #store the config of apache. Replace configApache with your own file
+        - configApache:/opt/docker/etc/httpd/conf.d/default
+        #replace MyPhp.ini with your own
+        - MyPhp.ini:/opt/docker/etc/php/php.ini
+    env_file:
+        - ./env.list
+#     networks:
+#       - back-network
+# networks:
+#   back-network:
+#     driver: bridge
+  #If you want to administrate your datas you can use adminer
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8081
